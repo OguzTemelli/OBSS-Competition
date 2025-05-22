@@ -1,12 +1,12 @@
 import os
 import pandas as pd
-from PIL import Image
 from torch.utils.data import Dataset, DataLoader
+from PIL import Image
 from transformers import BlipProcessor
 
-class ImageCaptioningDataset(Dataset):
-    def __init__(self, csv_path, image_dir, processor, max_length=50):
-        self.df = pd.read_csv(csv_path)
+class CaptionDataset(Dataset):
+    def __init__(self, csv_file, image_dir, processor, max_length=50):
+        self.df = pd.read_csv(csv_file)
         self.image_dir = image_dir
         self.processor = processor
         self.max_length = max_length
@@ -16,34 +16,33 @@ class ImageCaptioningDataset(Dataset):
 
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
-        image_id = row['image_id']
-        caption = row['caption']
-
-        # Load and preprocess image
-        image_path = os.path.join(self.image_dir, f"{image_id}.jpg")
+        image_path = os.path.join(self.image_dir, row['image_id'])
         image = Image.open(image_path).convert('RGB')
-        
-        # Process image and text
+        caption = row['caption']
         inputs = self.processor(
-            image,
+            images=image,
             text=caption,
-            return_tensors="pt",
-            padding="max_length",
             max_length=self.max_length,
-            truncation=True
+            padding='max_length',
+            truncation=True,
+            return_tensors='pt'
         )
-
+        # Squeeze to remove batch dim
+        pixel_values = inputs.pixel_values.squeeze()
+        input_ids    = inputs.input_ids.squeeze()
+        attention_mask = inputs.attention_mask.squeeze()
         return {
-            'pixel_values': inputs['pixel_values'].squeeze(),
-            'input_ids': inputs['input_ids'].squeeze(),
-            'attention_mask': inputs['attention_mask'].squeeze()
+            'pixel_values': pixel_values,
+            'input_ids': input_ids,
+            'attention_mask': attention_mask
         }
 
-def get_dataloader(csv_path, image_dir, processor, batch_size=8, shuffle=True):
-    dataset = ImageCaptioningDataset(csv_path, image_dir, processor)
+def get_dataloader(csv_file, image_dir, processor, batch_size=8, shuffle=True, num_workers=4):
+    dataset = CaptionDataset(csv_file, image_dir, processor)
     return DataLoader(
         dataset,
         batch_size=batch_size,
         shuffle=shuffle,
-        num_workers=4
+        num_workers=num_workers,
+        pin_memory=True
     ) 
