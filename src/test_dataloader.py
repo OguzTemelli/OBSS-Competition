@@ -1,17 +1,18 @@
+from src.data_loader import get_dataloader
 from transformers import BlipProcessor
-from data_loader import get_dataloader
 
 def test_dataloader():
     # Initialize processor
     processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
     
-    # Create dataloader
+    # Create dataloader with explicit paths and test-friendly settings
     dataloader = get_dataloader(
-        csv_file='data/train.csv',
-        image_dir='data/train',
+        csv_file='data/train/train.csv',
+        image_dir='data/train/images',
         processor=processor,
         batch_size=2,
-        shuffle=True
+        shuffle=True,
+        num_workers=0  # Use 0 workers for local testing
     )
     
     # Get a batch
