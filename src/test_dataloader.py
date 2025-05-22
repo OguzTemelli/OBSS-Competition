@@ -1,30 +1,41 @@
-from src.data_loader import get_dataloader
+#from src.data_loader import get_dataloader
+from data_loader import get_dataloader
 from transformers import BlipProcessor
 
-def test_dataloader():
-    # Initialize processor
+def test_dataloader_train():
     processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-    
-    # Create dataloader with explicit paths and test-friendly settings
     dataloader = get_dataloader(
-        csv_file='data/train/train.csv',
-        image_dir='data/train/images',
+        csv_file='../data/train/train.csv',
+        image_dir='../data/train/images',
         processor=processor,
         batch_size=2,
         shuffle=True,
-        num_workers=0  # Use 0 workers for local testing
+        num_workers=0
     )
-    
-    # Get a batch
     batch = next(iter(dataloader))
-    
-    # Print shapes
-    print("Batch shapes:")
+    print("[TRAIN] Batch shapes:")
     print(f"pixel_values: {batch['pixel_values'].shape}")
     print(f"input_ids: {batch['input_ids'].shape}")
     print(f"attention_mask: {batch['attention_mask'].shape}")
-    
+    return batch
+
+def test_dataloader_test():
+    processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+    dataloader = get_dataloader(
+        csv_file='../data/test/test.csv',
+        image_dir='../data/test/images',
+        processor=processor,
+        batch_size=2,
+        shuffle=False,
+        num_workers=0,
+        is_test=True
+    )
+    batch = next(iter(dataloader))
+    print("[TEST] Batch shapes:")
+    print(f"pixel_values: {batch['pixel_values'].shape}")
+    print(f"image_ids: {batch['image_id']}")
     return batch
 
 if __name__ == '__main__':
-    test_dataloader() 
+    test_dataloader_train()
+    test_dataloader_test() 
