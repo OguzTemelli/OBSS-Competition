@@ -1,35 +1,36 @@
+import os
 import torch
 from transformers import BlipProcessor, BlipForConditionalGeneration
 
 def load_model(model_name="Salesforce/blip-image-captioning-base", device=None):
     """
-    Load BLIP model and processor
+    Load BLIP model and processor.
+    Returns (model, processor) moved to the specified device.
     
     Args:
-        model_name (str): Name of the pretrained model
-        device (torch.device): Device to load the model on
+        model_name (str): HuggingFace model name or path
+        device (torch.device, optional): Device to load model on. If None, uses CUDA if available, else CPU.
     
     Returns:
-        tuple: (model, processor)
+        tuple: (model, processor) both moved to specified device
     """
-    if device is None:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
     processor = BlipProcessor.from_pretrained(model_name)
     model = BlipForConditionalGeneration.from_pretrained(model_name)
+    if device is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
-    
     return model, processor
 
 def save_model(model, processor, output_dir):
     """
-    Save model and processor
+    Save model and processor to output_dir.
     
     Args:
-        model: BLIP model
-        processor: BLIP processor
-        output_dir (str): Directory to save the model
+        model (BlipForConditionalGeneration): The model to save
+        processor (BlipProcessor): The processor to save
+        output_dir (str): Directory to save model and processor
     """
+    os.makedirs(output_dir, exist_ok=True)
     model.save_pretrained(output_dir)
     processor.save_pretrained(output_dir)
 
