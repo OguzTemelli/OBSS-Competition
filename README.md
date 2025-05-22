@@ -77,4 +77,44 @@ python src/evaluate.py --predictions path/to/predictions.csv --ground_truth path
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Data İndirme
+
+Veri dosyaları (ör. `train.zip`, `test.zip`) büyük boyutlu olduğu için doğrudan GitHub üzerinde tutulmaz. Bu dosyaları aşağıdaki yöntemlerle indirebilirsiniz:
+
+- Organizasyon tarafından sağlanan bir bulut bağlantısı (örn. Google Drive, S3, vb.)
+- Yarışma platformu veya organizatör tarafından paylaşılan linkler
+
+İndirdiğiniz dosyaları `data/` klasörüne yerleştirin:
+
+```
+obss-image-captioning-challenge/
+└── data/
+    ├── train.zip
+    └── test.zip
+```
+
+## Git LFS Kullanımı
+
+Büyük dosyalar için [Git Large File Storage (LFS)](https://git-lfs.github.com/) kullanılmaktadır. Eğer bu repoyu klonladıysanız ve büyük dosyaları indirmek istiyorsanız aşağıdaki adımları izleyin:
+
+```bash
+git lfs install
+git lfs pull
+```
+
+Eğer yeni bir büyük dosya ekleyecekseniz:
+
+```bash
+git lfs track "*.zip"
+git add .gitattributes
+```
+
+Daha sonra dosyayı ekleyip commit ve push edebilirsiniz:
+
+```bash
+git add data/train.zip
+git commit -m "Add train.zip with LFS"
+git push origin main
+``` 
