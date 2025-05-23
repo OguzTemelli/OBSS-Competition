@@ -1,70 +1,41 @@
-import argparse
-import pandas as pd
 import numpy as np
-from scipy import linalg
+import pandas as pd
+from numpy import cov, trace, iscomplexobj
+from scipy.linalg import sqrtm
 from sentence_transformers import SentenceTransformer
-from tqdm import tqdm
 
-def parse_args():
-    parser = argparse.ArgumentParser(description='Evaluate image captions using FGD')
-    parser.add_argument('--predictions', type=str, required=True, help='Path to predictions CSV')
-    parser.add_argument('--ground_truth', type=str, required=True, help='Path to ground truth CSV')
-    return parser.parse_args()
+def calculate_fgd(solution_embed: np.ndarray, submission_embed: np.ndarray) -> float:
+    fgd_list = []
+    for sol_emb, sub_emb in zip(solution_embed, submission_embed):
+        e1 = np.stack([sol_emb, sol_emb])
+        e2 = np.stack([sub_emb, sub_emb])
+        mu1, sigma1 = e1.mean(axis=0), cov(e1, rowvar=False)
+        mu2, sigma2 = e2.mean(axis=0), cov(e2, rowvar=False)
+        ssdiff = np.sum((mu1 - mu2) ** 2.0)
+        covmean = sqrtm(sigma1.dot(sigma2))
+        if iscomplexobj(covmean):
+            covmean = covmean.real
+        fgd = ssdiff + trace(sigma1 + sigma2 - 2.0 * covmean)
+        fgd_list.append(fgd)
+    return float(np.mean(fgd_list))
 
-def calculate_fgd(predictions, references):
-    """
-    Calculate Fréchet GPT Distance between predicted and reference captions
-    
-    Args:
-        predictions (list): List of predicted captions
-        references (list): List of reference captions
-    
-    Returns:
-        float: FGD score
-    """
-    # Load sentence transformer model
-    model = SentenceTransformer('all-MiniLM-L6-v2')
-    
-    # Get embeddings
-    print("Computing embeddings for predictions...")
-    pred_embeddings = model.encode(predictions, show_progress_bar=True)
-    
-    print("Computing embeddings for references...")
-    ref_embeddings = model.encode(references, show_progress_bar=True)
-    
-    # Calculate mean and covariance
-    mu_pred = np.mean(pred_embeddings, axis=0)
-    mu_ref = np.mean(ref_embeddings, axis=0)
-    sigma_pred = np.cov(pred_embeddings, rowvar=False)
-    sigma_ref = np.cov(ref_embeddings, rowvar=False)
-    
-    # Calculate FGD
-    ssdiff = np.sum((mu_pred - mu_ref) ** 2.0)
-    covmean = linalg.sqrtm(sigma_pred.dot(sigma_ref))
-    
-    if np.iscomplexobj(covmean):
-        covmean = covmean.real
-    
-    fgd = ssdiff + np.trace(sigma_pred + sigma_ref - 2.0 * covmean)
-    return fgd
+def evaluate_fgd(ground_truth_csv, prediction_csv):
+    gt_df = pd.read_csv(ground_truth_csv)
+    pred_df = pd.read_csv(prediction_csv)
+    merged = pd.merge(gt_df, pred_df, on="image_id", how="inner")
 
-def evaluate(args):
-    # Load predictions and ground truth
-    pred_df = pd.read_csv(args.predictions)
-    gt_df = pd.read_csv(args.ground_truth)
-    
-    # Ensure same order of images
-    pred_df = pred_df.sort_values('image_id')
-    gt_df = gt_df.sort_values('image_id')
-    
-    # Get captions
-    predictions = pred_df['caption'].tolist()
-    references = gt_df['caption'].tolist()
-    
-    # Calculate FGD
-    fgd_score = calculate_fgd(predictions, references)
+    model = SentenceTransformer("thenlper/gte-small")
+    gt_embeds = model.encode(merged["caption_x"].tolist(), convert_to_numpy=True)
+    pred_embeds = model.encode(merged["caption_y"].tolist(), convert_to_numpy=True)
+
+    fgd_score = calculate_fgd(gt_embeds, pred_embeds)
     print(f"FGD Score: {fgd_score:.4f}")
+    return fgd_score
 
-if __name__ == '__main__':
-    args = parse_args()
-    evaluate(args) 
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ground_truth_csv", required=True)
+    parser.add_argument("--prediction_csv", required=True)
+    args = parser.parse_args()
+    evaluate_fgd(args.ground_truth_csv, args.prediction_csv)
