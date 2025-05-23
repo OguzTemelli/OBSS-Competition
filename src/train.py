@@ -1,7 +1,8 @@
 import os
 import torch
 from torch.utils.data import DataLoader
-from transformers import BlipForConditionalGeneration, BlipProcessor, AdamW
+from transformers import BlipForConditionalGeneration, BlipProcessor
+from torch.optim import AdamW
 from tqdm import tqdm
 from data_loader import CaptionDataset
 from model import save_model
